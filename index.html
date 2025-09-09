@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mural de Notas Anônimas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 p-4 min-h-screen flex flex-col items-center justify-center">
+
+    <!-- Container Principal -->
+    <div class="max-w-3xl w-full bg-gray-800 rounded-xl shadow-lg border border-gray-700 p-6 sm:p-8">
+
+        <!-- Título e Descrição -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">Mural Anônimo Global</h1>
+            <p class="mt-2 text-gray-400 text-sm sm:text-base">Escreva uma nota para o mundo. Elas são totalmente anônimas e públicas.</p>
+        </header>
+
+        <!-- Contagem de Notas -->
+        <div class="text-center text-gray-400 mb-6">
+            <p><span id="note-count" class="font-bold text-lg text-white">0</span> notas postadas até agora.</p>
+        </div>
+        
+        <!-- Formulário de Nova Nota -->
+        <section class="mb-6">
+            <h2 class="text-xl font-semibold mb-3 text-white">Deixe sua nota</h2>
+            <textarea id="note-input" class="w-full h-24 p-4 rounded-lg bg-gray-700 text-gray-200 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400" placeholder="Escreva sua nota aqui..."></textarea>
+            <button id="add-note-btn" class="mt-4 w-full px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition duration-300 shadow-md">
+                Publicar Nota
+            </button>
+        </section>
+
+        <!-- Seção de Notas Existentes -->
+        <section>
+            <h2 class="text-xl font-semibold mb-3 text-white">Notas do Mural</h2>
+            <div id="notes-container" class="space-y-4">
+                <!-- Notas serão carregadas aqui -->
+            </div>
+            <p id="loading-message" class="text-gray-400 mt-4 text-center">Carregando notas...</p>
+        </section>
+    </div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:5000/notes';
+
+        // Função para buscar e renderizar as notas
+        async function fetchAndRenderNotes() {
+            const notesContainer = document.getElementById('notes-container');
+            const loadingMessage = document.getElementById('loading-message');
+            const noteCountSpan = document.getElementById('note-count');
+            
+            notesContainer.innerHTML = '';
+            loadingMessage.style.display = 'block';
+
+            try {
+                const response = await fetch(API_URL);
+                const notes = await response.json();
+
+                noteCountSpan.textContent = notes.length;
+
+                if (notes.length === 0) {
+                    notesContainer.innerHTML = `<p class="text-center text-gray-500">Nenhuma nota ainda. Seja o primeiro a adicionar uma!</p>`;
+                } else {
+                    notes.forEach(note => {
+                        const noteElement = document.createElement('div');
+                        noteElement.className = 'p-4 bg-gray-700 rounded-lg border border-gray-600';
+
+                        const date = new Date(note.created_at);
+                        const formattedDate = date.toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' });
+
+                        noteElement.innerHTML = `
+                            <p class="text-gray-200 break-words">${note.content}</p>
+                            <p class="mt-2 text-xs text-gray-500 text-right">Postada em: ${formattedDate}</p>
+                        `;
+                        notesContainer.appendChild(noteElement);
+                    });
+                }
+            } catch (error) {
+                console.error("Erro ao carregar as notas:", error);
+                loadingMessage.textContent = 'Erro ao carregar as notas. Verifique se o servidor Python está rodando.';
+            } finally {
+                loadingMessage.style.display = 'none';
+            }
+        }
+
+        // Função para adicionar uma nova nota
+        document.getElementById('add-note-btn').addEventListener('click', async () => {
+            const noteInput = document.getElementById('note-input');
+            const content = noteInput.value.trim();
+
+            if (content.length > 0) {
+                try {
+                    await fetch(API_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ content: content })
+                    });
+                    noteInput.value = '';
+                    fetchAndRenderNotes(); // Atualiza a lista de notas
+                } catch (e) {
+                    console.error("Erro ao adicionar nota:", e);
+                }
+            }
+        });
+
+        // Inicia o aplicativo quando a janela carrega
+        window.onload = fetchAndRenderNotes;
+    </script>
+</body>
+</html>
